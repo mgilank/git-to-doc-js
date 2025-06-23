@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitToDoc - Convert Git Repositories to Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .gradient-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen font-sans text-gray-800 leading-relaxed">
+    <div class="max-w-6xl mx-auto p-5">
+        <div class="text-center text-white mb-10">
+            <h1 class="text-5xl md:text-6xl mb-3 font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">🚀 GitToDoc</h1>
+            <p class="text-xl opacity-90">Convert Git repositories into AI-friendly documentation</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-8 mb-8 shadow-2xl transition-transform duration-300 hover:-translate-y-1">
+            <div class="flex mb-5 border-b-2 border-gray-200">
+                <button class="tab px-6 py-3 bg-transparent border-none cursor-pointer text-base text-gray-500 border-b-2 border-transparent transition-all duration-300 active" onclick="switchTab('clone')">Clone Repository</button>
+                <button class="tab px-6 py-3 bg-transparent border-none cursor-pointer text-base text-gray-500 border-b-2 border-transparent transition-all duration-300" onclick="switchTab('upload')">Upload ZIP</button>
+                <button class="tab px-6 py-3 bg-transparent border-none cursor-pointer text-base text-gray-500 border-b-2 border-transparent transition-all duration-300" onclick="switchTab('local')">Local Directory</button>
+                <button class="tab px-6 py-3 bg-transparent border-none cursor-pointer text-base text-gray-500 border-b-2 border-transparent transition-all duration-300" onclick="switchTab('saved')">Saved Files</button>
+            </div>
+
+            <!-- Clone Repository Tab -->
+            <div id="clone-tab" class="tab-content block">
+                <h2 class="text-gray-600 mb-5 text-2xl">📥 Clone Git Repository</h2>
+                <form id="clone-form">
+                    <div class="mb-5">
+                        <label for="repo-url" class="block mb-2 font-semibold text-gray-600">Repository URL:</label>
+                        <input type="text" id="repo-url" placeholder="https://github.com/user/repo.git" required class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors duration-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                    </div>
+                    <div class="mb-5">
+                        <label for="branch" class="block mb-2 font-semibold text-gray-600">Branch (optional):</label>
+                        <input type="text" id="branch" placeholder="main" value="main" class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors duration-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                    </div>
+                    <button type="submit" class="gradient-btn text-white px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg inline-block">Clone & Generate Documentation</button>
+                </form>
+            </div>
+
+            <!-- Upload ZIP Tab -->
+            <div id="upload-tab" class="tab-content hidden">
+                <h2 class="text-gray-600 mb-5 text-2xl">📁 Upload Repository ZIP</h2>
+                <form id="upload-form">
+                    <div class="mb-5">
+                        <label for="zip-file" class="block mb-2 font-semibold text-gray-600">ZIP File:</label>
+                        <input type="file" id="zip-file" accept=".zip" required class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors duration-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                    </div>
+                    <button type="submit" class="gradient-btn text-white px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg inline-block">Upload & Generate Documentation</button>
+                </form>
+            </div>
+
+            <!-- Local Directory Tab -->
+            <div id="local-tab" class="tab-content hidden">
+                <h2 class="text-gray-600 mb-5 text-2xl">📂 Process Local Directory</h2>
+                <form id="local-form">
+                    <div class="mb-5">
+                        <label for="local-path" class="block mb-2 font-semibold text-gray-600">Local Path:</label>
+                        <input type="text" id="local-path" placeholder="/path/to/your/project" required class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors duration-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                    </div>
+                    <button type="submit" class="gradient-btn text-white px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg inline-block">Generate Documentation</button>
+                </form>
+            </div>
+
+            <!-- Saved Files Tab -->
+            <div id="saved-tab" class="tab-content hidden">
+                <h2 class="text-gray-600 mb-5 text-2xl">💾 Saved Documentation Files</h2>
+                <div class="mt-5">
+                    <button class="gradient-btn text-white px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg inline-block mb-5" onclick="loadSavedFiles()">🔄 Refresh List</button>
+                    <div id="saved-files-table"></div>
+                </div>
+            </div>
+
+            <div class="hidden text-center p-5" id="loading">
+                <div class="spinner border-4 border-gray-200 border-t-indigo-500 rounded-full w-10 h-10 mx-auto mb-3"></div>
+                <p>Processing repository...</p>
+            </div>
+
+            <div class="hidden bg-red-100 text-red-700 p-4 rounded-lg mt-5" id="error"></div>
+            <div class="hidden bg-green-100 text-green-700 p-4 rounded-lg mt-5" id="success"></div>
+
+            <div class="hidden bg-gray-50 border border-gray-200 rounded-lg p-5 mt-5" id="result">
+                <h3 class="text-gray-700 mb-4 text-xl">📊 Documentation Generated Successfully!</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5" id="stats"></div>
+                <div class="hidden" id="saved-files-info">
+                    <h4 class="text-lg font-semibold mb-3">💾 Saved Files</h4>
+                    <div id="saved-files-list"></div>
+                </div>
+                <div class="flex gap-3 flex-wrap">
+                    <button class="gradient-btn text-white px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg inline-block" onclick="downloadDocumentation('json')">Download JSON</button>
+                    <button class="gradient-btn text-white px-6 py-3 border-none rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg inline-block" onclick="downloadDocumentation('markdown')">Download Markdown</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDocumentation = null;
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('block');
+                content.classList.add('hidden');
+            });
+
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+                tab.classList.remove('text-indigo-500', 'border-indigo-500');
+                tab.classList.add('text-gray-500', 'border-transparent');
+            });
+
+            // Show selected tab content
+            const selectedTab = document.getElementById(tabName + '-tab');
+            selectedTab.classList.remove('hidden');
+            selectedTab.classList.add('block');
+
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            event.target.classList.remove('text-gray-500', 'border-transparent');
+            event.target.classList.add('text-indigo-500', 'border-indigo-500');
+
+            // Hide results
+            hideResults();
+        }
+
+        function showLoading() {
+            const element = document.getElementById('loading');
+            element.classList.remove('hidden');
+            element.classList.add('block');
+            hideResults();
+        }
+
+        function hideLoading() {
+            const element = document.getElementById('loading');
+            element.classList.remove('block');
+            element.classList.add('hidden');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            errorDiv.classList.add('block');
+            hideLoading();
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.classList.remove('hidden');
+            successDiv.classList.add('block');
+        }
+
+        function hideResults() {
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+            
+            resultDiv.classList.remove('block');
+            resultDiv.classList.add('hidden');
+            errorDiv.classList.remove('block');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.remove('block');
+            successDiv.classList.add('hidden');
+        }
+
+        function displayResults(data) {
+            currentDocumentation = data.documentation;
+            
+            const stats = data.documentation.stats;
+            const statsHtml = `
+                <div class="bg-white p-4 rounded-lg text-center border border-gray-200">
+                    <div class="text-2xl font-bold text-indigo-500">${stats.totalFiles}</div>
+                    <div class="text-gray-500 text-sm">Total Files</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg text-center border border-gray-200">
+                    <div class="text-2xl font-bold text-indigo-500">${formatBytes(stats.totalSize)}</div>
+                    <div class="text-gray-500 text-sm">Total Size</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg text-center border border-gray-200">
+                    <div class="text-2xl font-bold text-indigo-500">${Object.keys(stats.fileTypes).length}</div>
+                    <div class="text-gray-500 text-sm">File Types</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg text-center border border-gray-200">
+                    <div class="text-2xl font-bold text-indigo-500">${data.documentation.projectInfo.name}</div>
+                    <div class="text-gray-500 text-sm">Project Name</div>
+                </div>
+            `;
+            
+            document.getElementById('stats').innerHTML = statsHtml;
+            
+            // Show saved files info if available
+            if (data.savedFiles) {
+                const savedFilesInfo = document.getElementById('saved-files-info');
+                const savedFilesList = document.getElementById('saved-files-list');
+                
+                let savedFilesHtml = '';
+                if (data.savedFiles.json) {
+                    savedFilesHtml += `
+                        <div class="saved-file-item">
+                            <div class="saved-file-info">
+                                <div class="saved-file-name">📄 JSON Documentation</div>
+                                <div class="saved-file-meta">File ID: ${data.savedFiles.json.id}</div>
+                            </div>
+                            <div class="file-actions">
+                                <a href="/api/files/${data.savedFiles.json.id}" class="btn-small" target="_blank">Download</a>
+                            </div>
+                        </div>
+                    `;
+                }
+                if (data.savedFiles.markdown) {
+                    savedFilesHtml += `
+                        <div class="saved-file-item">
+                            <div class="saved-file-info">
+                                <div class="saved-file-name">📝 Markdown Documentation</div>
+                                <div class="saved-file-meta">File ID: ${data.savedFiles.markdown.id}</div>
+                            </div>
+                            <div class="file-actions">
+                                <a href="/api/files/${data.savedFiles.markdown.id}" class="btn-small" target="_blank">Download</a>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                savedFilesList.innerHTML = savedFilesHtml;
+                savedFilesInfo.classList.remove('hidden');
+                savedFilesInfo.classList.add('block');
+            }
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.classList.remove('hidden');
+            resultDiv.classList.add('block');
+            hideLoading();
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function downloadDocumentation(format) {
+            if (!currentDocumentation) return;
+            
+            try {
+                const response = await fetch(`/api/download/${format}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        documentation: currentDocumentation
+                    })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `documentation.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    showError(`Failed to download ${format} documentation`);
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                showError(`Failed to download ${format} documentation`);
+            }
+        }
+
+        // Saved files functions
+        async function loadSavedFiles() {
+            try {
+                const response = await fetch('/api/files');
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch files');
+                }
+                
+                const files = data.files || [];
+                const tableContainer = document.getElementById('saved-files-table');
+                
+                if (files.length === 0) {
+                    tableContainer.innerHTML = '<p>No saved files found.</p>';
+                    return;
+                }
+                
+                let tableHtml = `
+                    <table class="w-full border-collapse mt-5">
+                        <thead>
+                            <tr>
+                                <th class="p-3 text-left border-b border-gray-200 bg-gray-50 font-semibold text-gray-600">File Name</th>
+                                <th class="p-3 text-left border-b border-gray-200 bg-gray-50 font-semibold text-gray-600">Type</th>
+                                <th class="p-3 text-left border-b border-gray-200 bg-gray-50 font-semibold text-gray-600">Size</th>
+                                <th class="p-3 text-left border-b border-gray-200 bg-gray-50 font-semibold text-gray-600">Created</th>
+                                <th class="p-3 text-left border-b border-gray-200 bg-gray-50 font-semibold text-gray-600">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                files.forEach(file => {
+                    const createdDate = new Date(file.createdAt).toLocaleString();
+                    tableHtml += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3 border-b border-gray-200">${file.filename}</td>
+                            <td class="p-3 border-b border-gray-200">${file.format.toUpperCase()}</td>
+                            <td class="p-3 border-b border-gray-200">${formatBytes(file.size)}</td>
+                            <td class="p-3 border-b border-gray-200">${createdDate}</td>
+                            <td class="p-3 border-b border-gray-200">
+                                <div class="flex gap-2">
+                                    <a href="/api/files/${file.id}" class="px-3 py-1.5 text-sm bg-indigo-500 text-white border-none rounded cursor-pointer no-underline inline-block hover:bg-indigo-600" target="_blank">Download</a>
+                                    <button class="px-3 py-1.5 text-sm bg-red-500 text-white border-none rounded cursor-pointer hover:bg-red-600" onclick="deleteSavedFile('${file.id}')">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tableHtml += `
+                        </tbody>
+                    </table>
+                `;
+                
+                tableContainer.innerHTML = tableHtml;
+            } catch (error) {
+                console.error('Error loading saved files:', error);
+                showError('Failed to load saved files');
+            }
+        }
+
+        async function deleteSavedFile(fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/files/${fileId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showSuccess('File deleted successfully');
+                    loadSavedFiles(); // Refresh the list
+                } else {
+                    showError('Failed to delete file');
+                }
+            } catch (error) {
+                console.error('Error deleting file:', error);
+                showError('Failed to delete file');
+            }
+        }
+
+        // Form handlers
+        document.getElementById('clone-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const repoUrl = document.getElementById('repo-url').value;
+            const branch = document.getElementById('branch').value || 'main';
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/clone', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ repoUrl, branch })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data);
+                    showSuccess('Repository cloned and documentation generated successfully!');
+                } else {
+                    showError(data.error || 'Failed to process repository');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        });
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('zip-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showError('Please select a ZIP file');
+                return;
+            }
+            
+            showLoading();
+            
+            const formData = new FormData();
+            formData.append('repository', file);
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data);
+                    showSuccess('ZIP file processed and documentation generated successfully!');
+                } else {
+                    showError(data.error || 'Failed to process ZIP file');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        });
+
+        document.getElementById('local-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const localPath = document.getElementById('local-path').value;
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/local', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ path: localPath })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data);
+                    showSuccess('Local directory processed and documentation generated successfully!');
+                } else {
+                    showError(data.error || 'Failed to process local directory');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
