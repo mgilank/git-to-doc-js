@@ -1,4 +1,6 @@
-# GitToDoc 🚀
+# GitToDoc JS Version 🚀
+
+![screenshot](https://ipic.fun/f/e8f387c.jpg)
 
 Inspired by https://www.gittodoc.com/
 A powerful tool to convert Git repositories into AI-friendly documentation. This Express.js application processes Git repositories and generates comprehensive documentation that can be easily consumed by AI systems.
