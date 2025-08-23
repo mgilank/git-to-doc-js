@@ -93,6 +93,13 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static('public'));
 
+// Set server timeout to 10 minutes for large directory processing
+app.use((req, res, next) => {
+  req.setTimeout(600000); // 10 minutes
+  res.setTimeout(600000); // 10 minutes
+  next();
+});
+
 // Configure multer for file uploads
 const upload = multer({ 
   dest: 'uploads/',
@@ -488,6 +495,9 @@ app.post('/api/local', (req, res) => {
     
     const documentation = generateDocumentation(localPath);
     
+    // Convert documentation to markdown
+    const markdownContent = convertToMarkdown(documentation);
+    
     // Save documentation to files
     const source = {
       type: 'local_directory',
@@ -497,15 +507,11 @@ app.post('/api/local', (req, res) => {
     const jsonFile = saveDocumentationToFile(documentation, source, 'json');
     const markdownFile = saveDocumentationToFile(documentation, source, 'markdown');
     
-    res.json({
-      success: true,
-      documentation,
-      source,
-      savedFiles: {
-        json: jsonFile,
-        markdown: markdownFile
-      }
-    });
+    // Return markdown content instead of JSON
+    const contentBuffer = Buffer.from(markdownContent, 'utf8');
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Length', contentBuffer.length);
+    res.send(markdownContent);
     
   } catch (error) {
     console.error('Error processing local directory:', error);
